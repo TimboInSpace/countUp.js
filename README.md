@@ -5,18 +5,74 @@ Despite its name, CountUp can count in either direction, depending on the start 
 
 CountUp.js supports all browsers. MIT license.
 
-## [Try the demo](https://inorganik.github.io/countUp.js)
+## Fork Details
 
-Or tinker with CountUp in [Stackblitz](https://stackblitz.com/edit/countup-typescript)
+This is a fork of [**countUp.js**](https://inorganik.github.io/countUp.js), with a couple tweaks for simpler usage with finicky build systems.
 
-## Jump to:
+> In short, I'm using the old-school way of importing the code. Don't hate me :sweat_smile:
 
-- **[Usage](#usage)**
-- **[Including CountUp](#including-countup)**
-- **[Contributing](#contributing)**
-- **[Creating Animation Plugins](#creating-animation-plugins)**
+While using this module with **Hugo**, I was having major problems trying to integrate the forked repo into a website. Seemingly, this is because the Hugo javascript-builder (for "production" build) would not play nice with importing code outside the assets directory.
+
+:point_right: This fork makes it so countUp.js is not a module, but rather just a function on the `window` object.
+
+### Include the script
+
+In the page header (`layouts/partials/head/js.html` for this Hugo site) just add a `<script>` tag for CountUp:
+
+```html
+<script src="js/countUp.min.js" type="module"></script>
+{{- with resources.Get "js/main.js" }}
+  {{- if eq hugo.Environment "development" }}
+    {{- with . | js.Build }}
+      <script src="{{ .RelPermalink }}" defer></script>
+    {{- end }}
+  {{- else }}
+    {{- $opts := dict "minify" true }}
+    {{- with . | js.Build $opts | fingerprint }}
+      <script src="{{ .RelPermalink }}" integrity="{{- .Data.Integrity }}" crossorigin="anonymous"></script>
+    {{- end }}
+  {{- end }}
+{{- end }}
+<!-- ... -->
+```
+
+### Use the script
+
+To use this script, just create a `new CountUp` somewhere. This code runs on the `DOMContentLoaded` event, and utilizes scrollspy to trigger Countup only when the registered elements come into view:
+
+```js
+function scrollspyCounters() {
+    // Find elements that should have CountUp used on them
+    const elements = document.querySelectorAll('.counter-number.countup');
+    // Assign a CountUp object for each of these elements
+    elements.forEach(ele => {
+        // Collect the CountUp parameters from the element's attributes
+        const num = parseInt(ele.getAttribute('data-countup-number')) || 0;
+        const suff = ele.getAttribute('data-countup-suffix') || "";
+        const options = {
+            suffix: suff,
+            enableScrollSpy: true,
+            scrollSpyOnce: true
+        };
+        // Create the CountUp instance, and start() it.
+        const countUp = new CountUp(ele, num, options);
+        if (!countUp.error) {
+            countUp.start();
+        } else {
+            console.error("CountUp error:", countUp.error);
+        }
+    });
+}
+```
+
+It should work without too much fussin'
+
+![modified countup](modified countup.gif)
+
+
 
 ## Features
+
 - **Animate when element scrolls into view.** Use option `enableScrollSpy`.
 - **Highly customizeable** with a large range of options, you can even substitute numerals.
 - **Smart easing**: CountUp intelligently defers easing until it gets close enough to the end value for easing to be visually noticeable. Configureable in the [options](#options).
